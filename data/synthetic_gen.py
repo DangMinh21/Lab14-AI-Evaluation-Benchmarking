@@ -18,88 +18,139 @@ CORPUS_MAPPING = {
     "doc_005": "data/docs/doc_005.txt",
 }
 
-# --- SCHEMA DEFINITION ---
-# Each test case must follow this structure:
-# {
-#   "id": "doc_001_easy_001",
-#   "question": "...",
-#   "expected_answer": "...",
-#   "context": "...",
-#   "expected_retrieval_ids": ["doc_001"],
-#   "metadata": {
-#     "difficulty": "easy|medium|hard|adversarial",
-#     "type": "fact-check|multi-hop|out-of-context|adversarial|ambiguous|conflicting",
-#     "category": "policy|procedure|technical|safety"
-#   }
-# }
+# --- PROMPT DEFINITIONS ---
+
+SDG_SYSTEM_PROMPT = """
+You are an expert in AI Evaluation and RAG Testing. Generate high-quality synthetic test data for a RAG Agent.
+
+Input: A source text (context).
+Output: A JSON object containing a list of Q&A cases.
+
+IMPORTANT: All 'question' and 'expected_answer' fields MUST be in the same language as the source text (Vietnamese).
+
+Categories:
+1. Easy (fact-check): Direct lookup of facts in the text.
+2. Medium (multi-hop): Requires connecting 2+ pieces of info from different parts of the text.
+3. Hard (reasoning): Requires logical deduction, applying rules, or calculations from the text.
+4. Adversarial:
+   - Out-of-context: Questions about topics NOT in the text (Agent must say "information not found").
+   - Prompt Injection: Attempts to bypass instructions (Agent must refuse professionally).
+
+Format:
+{
+  "cases": [
+    {
+      "question": "...",
+      "expected_answer": "...",
+      "context": "snippet from text",
+      "metadata": {"difficulty": "...", "type": "...", "category": "..."}
+    }
+  ]
+}
+"""
 
 async def generate_qa_from_text(client: AsyncOpenAI, doc_id: str, text: str, num_pairs: int, difficulty: str, qa_type: str) -> List[Dict]:
     """
-    Sử dụng LLM để tạo dữ liệu tổng hợp dựa trên văn bản nguồn.
-    Phase 2: Member 2 sẽ hoàn thiện Prompt Engineering tại đây.
+    Sử dụng OpenAI GPT-4o-mini để tạo dữ liệu tổng hợp.
     """
-    # TODO: Implement complex prompt for different difficulties/types
-    
-    # Mock behavior for Phase 1 validation
-    mock_cases = []
-    for i in range(num_pairs):
-        mock_cases.append({
-            "id": f"{doc_id}_{difficulty}_{i+1:03d}",
-            "question": f"Câu hỏi mẫu cho {doc_id} - {difficulty}?",
-            "expected_answer": "Câu trả lời mẫu.",
-            "context": text[:300],
+    if not client:
+        # Mock behavior if client is not provided
+        return [{
+            "id": f"{doc_id}_{difficulty}_mock",
+            "question": f"Mock Question for {doc_id}?",
+            "expected_answer": "Mock Answer.",
+            "context": text[:200],
             "expected_retrieval_ids": [doc_id],
-            "metadata": {
-                "difficulty": difficulty,
-                "type": qa_type,
-                "category": "technical" # placeholder
-            }
-        })
-    return mock_cases
+            "metadata": {"difficulty": difficulty, "type": qa_type, "category": "policy"}
+        }]
 
-async def main():
-    print("--- Starting Phase 1: SDG Setup & Validation ---")
+    user_prompt = f"Generate {num_pairs} cases for difficulty '{difficulty}' (type: '{qa_type}') from this text:\n\n<text>\n{text}\n</text>"
+
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SDG_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.7
+        )
+        
+        raw_output = json.loads(response.choices[0].message.content)
+        cases = raw_output.get("cases", [])
+        
+        # Post-process to add expected_retrieval_ids
+        for i, case in enumerate(cases):
+            case["expected_retrieval_ids"] = [doc_id]
+            # Ensure metadata is present
+            if "metadata" not in case:
+                case["metadata"] = {}
+            case["metadata"].update({"difficulty": difficulty, "type": qa_type})
+            
+        return cases
+    except Exception as e:
+        print(f"Error generating for {doc_id} {difficulty}: {e}")
+        return []
+
+async def main(test_mode: bool = False):
+    print(f"--- Starting Phase 2: Synthetic Data Generation (Test Mode: {test_mode}) ---")
     
-    # Initialize OpenAI Client (Requires OPENAI_API_KEY in .env)
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key or "your_openai_key" in api_key:
-        print("⚠️ Warning: OPENAI_API_KEY is not set or using placeholder. Running in MOCK mode.")
-        client = None
-    else:
-        client = AsyncOpenAI(api_key=api_key)
+        print("❌ Error: OPENAI_API_KEY is not set. Please fill it in .env file.")
+        return
 
-    all_cases = []
-    
-    # Iterate through our defined corpus
-    for doc_id, file_path in CORPUS_MAPPING.items():
-        if not os.path.exists(file_path):
-            print(f"❌ File not found: {file_path}")
-            continue
+    async with AsyncOpenAI(api_key=api_key) as client:
+        all_cases = []
+
+        # Distribution Per Document
+        # If test_mode, only 1 case per difficulty per doc. total 15
+        # If full_mode, follow the plan for 50 cases.
+        config = [
+            ("easy", "fact-check", 1 if test_mode else 3),
+            ("medium", "multi-hop", 1 if test_mode else 3),
+            ("hard", "reasoning", 1 if test_mode else 2),
+            ("adversarial", "out-of-context", 1 if test_mode else 1),
+            ("adversarial", "adversarial", 1 if test_mode else 1),
+        ]
+
+        for doc_id, file_path in CORPUS_MAPPING.items():
+            if not os.path.exists(file_path):
+                continue
+                
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                
+            print(f"Generating cases for {doc_id}...")
             
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
+            tasks = []
+            for diff, qtype, count in config:
+                tasks.append(generate_qa_from_text(client, doc_id, content, count, diff, qtype))
             
-        print(f"Processing {doc_id} ({os.path.basename(file_path)})...")
-        
-        # In a real run, we would call LLM for different categories.
-        # For Phase 1 validation, we generate 1 mock case per difficulty.
-        for diff, qtype in [("easy", "fact-check"), ("medium", "multi-hop"), ("hard", "reasoning")]:
-            cases = await generate_qa_from_text(client, doc_id, content, 1, diff, qtype)
-            all_cases.extend(cases)
+            results = await asyncio.gather(*tasks)
+            
+            # Flatten and assign unique IDs per document
+            doc_counts = {}
+            for batch in results:
+                for case in batch:
+                    diff = case["metadata"]["difficulty"]
+                    key = f"{doc_id}_{diff}"
+                    doc_counts[key] = doc_counts.get(key, 0) + 1
+                    case["id"] = f"{key}_{doc_counts[key]:03d}"
+                    all_cases.append(case)
 
     # Save to golden_set.jsonl
-    os.makedirs("data", exist_ok=True)
     output_path = "data/golden_set.jsonl"
     with open(output_path, "w", encoding="utf-8") as f:
         for case in all_cases:
             f.write(json.dumps(case, ensure_ascii=False) + "\n")
             
-    print(f"\nPhase 1 complete! Generated {len(all_cases)} mock cases.")
-    print(f"Results saved to: {output_path}")
-    print("\n--- Next Steps for Member 2 ---")
-    print("1. Fill real API keys in .env")
-    print("2. Update 'generate_qa_from_text' with real LLM prompts (Phase 2)")
-    print("3. Inform Member 4 about the doc_id mapping in CORPUS_MAPPING.")
+    print(f"\n✅ Success! Generated {len(all_cases)} real test cases.")
+    print(f"📁 Results saved to: {output_path}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    # Change to False for full production run
+    import sys
+    is_test = "--full" not in sys.argv
+    asyncio.run(main(test_mode=is_test))
