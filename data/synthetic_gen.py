@@ -82,7 +82,10 @@ async def generate_qa_from_text(client: AsyncOpenAI, doc_id: str, text: str, num
         
         # Post-process to add expected_retrieval_ids
         for i, case in enumerate(cases):
-            case["expected_retrieval_ids"] = [doc_id]
+            if difficulty == "adversarial":
+                case["expected_retrieval_ids"] = []
+            else:
+                case["expected_retrieval_ids"] = [doc_id]
             # Ensure metadata is present
             if "metadata" not in case:
                 case["metadata"] = {}
