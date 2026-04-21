@@ -1,5 +1,11 @@
 import json
 import os
+import sys
+
+# Fix Unicode issues on Windows
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 def validate_lab():
     print("🔍 Đang kiểm tra định dạng bài nộp...")
