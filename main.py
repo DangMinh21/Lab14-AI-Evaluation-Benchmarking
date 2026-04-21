@@ -5,7 +5,7 @@ import time
 from engine.runner import BenchmarkRunner
 from engine.retrieval_eval import RetrievalEvaluator
 from engine.llm_judge import LLMJudge
-from agent.main_agent import MainAgent, _V2_SYSTEM_PROMPT
+from agent.main_agent import MainAgent, _DEFAULT_SYSTEM_PROMPT, _V2_SYSTEM_PROMPT
 
 _retrieval_eval = RetrievalEvaluator()
 
@@ -136,12 +136,12 @@ async def run_benchmark_with_results(agent_version: str, top_k: int = 3, system_
 async def main():
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    # V1: baseline — top_k=3, default system prompt
+    # V1: baseline — top_k=3, terse prompt (1-2 câu, bỏ qua chi tiết)
     v1_results, v1_summary = await run_benchmark_with_results(
-        "Agent_V1_Base", top_k=3
+        "Agent_V1_Base", top_k=3, system_prompt=_DEFAULT_SYSTEM_PROMPT
     )
 
-    # V2: improved — top_k=5, enhanced system prompt emphasising completeness & accuracy
+    # V2: improved — top_k=5, detailed prompt (liệt kê đầy đủ, trích dẫn chính xác)
     v2_results, v2_summary = await run_benchmark_with_results(
         "Agent_V2_Optimized", top_k=5, system_prompt=_V2_SYSTEM_PROMPT
     )

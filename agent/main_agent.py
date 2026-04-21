@@ -43,9 +43,9 @@ def load_documents(docs_dir: str) -> List[Dict]:
 
 _DEFAULT_SYSTEM_PROMPT = (
     "Bạn là trợ lý hỗ trợ nội bộ. "
-    "Chỉ trả lời dựa trên tài liệu được cung cấp. "
-    "Nếu không có thông tin, hãy nói rõ: 'Tôi không có thông tin về vấn đề này trong tài liệu.' "
-    "Trả lời ngắn gọn, rõ ràng."
+    "Dựa trên tài liệu được cung cấp, hãy trả lời câu hỏi trong 1-2 câu ngắn gọn nhất có thể. "
+    "Không liệt kê chi tiết, chỉ nêu ý chính. "
+    "Nếu không có thông tin, nói: 'Tôi không có thông tin về vấn đề này.'"
 )
 
 _V2_SYSTEM_PROMPT = (

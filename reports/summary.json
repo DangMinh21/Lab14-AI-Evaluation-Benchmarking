@@ -2,28 +2,28 @@
   "metadata": {
     "total": 55,
     "version": "BASELINE (V1)",
-    "timestamp": "2026-04-21 17:19:49",
+    "timestamp": "2026-04-21 17:33:36",
     "versions_compared": [
       "V1",
       "V2"
     ]
   },
   "metrics": {
-    "avg_score": 4.5873,
+    "avg_score": 4.4782,
     "hit_rate": 1.0,
-    "agreement_rate": 0.9294
+    "agreement_rate": 0.9291
   },
   "regression": {
     "v1": {
-      "score": 4.5873,
+      "score": 4.4782,
       "hit_rate": 1.0,
-      "judge_agreement": 0.9294
+      "judge_agreement": 0.9291
     },
     "v2": {
-      "score": 4.5218,
+      "score": 4.5273,
       "hit_rate": 1.0,
-      "judge_agreement": 0.9123
+      "judge_agreement": 0.9186
     },
-    "decision": "BLOCK"
+    "decision": "APPROVE"
   }
 }
