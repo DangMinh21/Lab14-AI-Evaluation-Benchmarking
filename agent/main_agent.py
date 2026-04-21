@@ -9,15 +9,34 @@ DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "docs")
 
 
 def load_documents(docs_dir: str) -> List[Dict]:
-    """Đọc tất cả file .txt trong data/docs/, dùng tên file (không có .txt) làm doc ID"""
-    docs = []
+    """Đọc tất cả file .txt trong data/docs/, chunk theo fixed_size (250 words, overlap 25 words)"""
+    CHUNK_SIZE = 50   # words
+    OVERLAP = 5       # words
+
+    chunks = []
     for filename in sorted(os.listdir(docs_dir)):
-        if filename.endswith(".txt"):
-            doc_id = filename.replace(".txt", "")
-            filepath = os.path.join(docs_dir, filename)
-            with open(filepath, "r", encoding="utf-8") as f:
-                docs.append({"id": doc_id, "text": f.read()})
-    return docs
+        if not filename.endswith(".txt"):
+            continue
+        doc_id = filename.replace(".txt", "")
+        filepath = os.path.join(docs_dir, filename)
+        with open(filepath, "r", encoding="utf-8") as f:
+            words = f.read().split()
+
+        # Sliding window chunking
+        start = 0
+        chunk_idx = 0
+        while start < len(words):
+            end = start + CHUNK_SIZE
+            chunk_text = " ".join(words[start:end])
+            chunks.append({
+                "id": f"{doc_id}_chunk_{chunk_idx}",
+                "doc_id": doc_id,          # giữ lại doc_id gốc để map khi eval
+                "text": chunk_text,
+            })
+            chunk_idx += 1
+            start += CHUNK_SIZE - OVERLAP  # slide với overlap
+
+    return chunks
 
 
 class MainAgent:
@@ -50,20 +69,32 @@ class MainAgent:
             self.collection.add(
                 ids=[doc["id"] for doc in documents],
                 documents=[doc["text"] for doc in documents],
+                metadatas=[{"doc_id": doc["doc_id"]} for doc in documents],
             )
-            print(f"[ChromaDB] Indexed {len(documents)} documents from {DOCS_DIR}.")
+            print(f"[ChromaDB] Indexed {len(documents)} chunks from {DOCS_DIR}.")
         else:
-            print(f"[ChromaDB] Loaded {self.collection.count()} documents from disk.")
+            print(f"[ChromaDB] Loaded {self.collection.count()} chunks from disk.")
 
-    async def _retrieve(self, question: str, top_k: int = 3) -> tuple[List[str], List[str]]:
-        """Vector search: trả về top_k doc IDs và texts liên quan nhất"""
+    async def _retrieve(self, question: str, top_k: int = 3) -> tuple[List[str], List[str], List[str]]:
+        """Vector search: trả về doc IDs gốc (cho eval), chunk IDs (cho analysis), và chunk texts"""
         results = self.collection.query(
             query_texts=[question],
             n_results=top_k,
+            include=["documents", "metadatas"],
         )
-        retrieved_ids: List[str] = results["ids"][0]
         contexts: List[str] = results["documents"][0]
-        return retrieved_ids, contexts
+        chunk_ids: List[str] = results["ids"][0]
+
+        # Map chunk IDs về doc IDs gốc, giữ thứ tự và dedup
+        seen = set()
+        retrieved_ids: List[str] = []
+        for meta in results["metadatas"][0]:
+            doc_id = meta["doc_id"]
+            if doc_id not in seen:
+                seen.add(doc_id)
+                retrieved_ids.append(doc_id)
+
+        return retrieved_ids, chunk_ids, contexts
 
     async def _generate(self, question: str, contexts: List[str]) -> tuple[str, Dict]:
         """Gọi OpenAI với retrieved contexts để sinh câu trả lời"""
@@ -114,14 +145,15 @@ class MainAgent:
         RAG pipeline: Retrieve → Generate
         Trả về retrieved_ids để RetrievalEvaluator tính Hit Rate & MRR.
         """
-        retrieved_ids, contexts = await self._retrieve(question, top_k=3)
+        retrieved_ids, chunk_ids, contexts = await self._retrieve(question, top_k=3)
         answer, metadata = await self._generate(question, contexts)
         metadata["sources"] = retrieved_ids
 
         return {
             "answer": answer,
             "contexts": contexts,
-            "retrieved_ids": retrieved_ids,   # BẮT BUỘC cho Retrieval Evaluation
+            "retrieved_ids": retrieved_ids,        # doc IDs — cho Retrieval Evaluation
+            "retrieved_chunk_ids": chunk_ids,      # chunk IDs — cho Failure Analysis
             "metadata": metadata,
         }
 
