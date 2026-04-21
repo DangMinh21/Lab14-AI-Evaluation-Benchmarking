@@ -51,8 +51,8 @@ class MultiModelJudge:
         return await self._judge.evaluate_multi_judge(q, a, gt)
 
 
-async def run_benchmark_with_results(agent_version: str):
-    print(f"🚀 Khởi động Benchmark cho {agent_version}...")
+async def run_benchmark_with_results(agent_version: str, top_k: int = 3):
+    print(f"🚀 Khởi động Benchmark cho {agent_version} (top_k={top_k})...")
 
     if not os.path.exists("data/golden_set.jsonl"):
         print("❌ Thiếu data/golden_set.jsonl. Hãy chạy 'python data/synthetic_gen.py' trước.")
@@ -67,7 +67,7 @@ async def run_benchmark_with_results(agent_version: str):
 
     print(f"📂 Dataset: {len(dataset)} test cases")
 
-    runner = BenchmarkRunner(MainAgent(), ExpertEvaluator(), MultiModelJudge())
+    runner = BenchmarkRunner(MainAgent(top_k=top_k), ExpertEvaluator(), MultiModelJudge())
     results = await runner.run_all(dataset)
 
     # Aggregate stats: latency percentiles, cost, pass rate
@@ -102,14 +102,17 @@ async def run_benchmark_with_results(agent_version: str):
     return results, summary
 
 
-async def run_benchmark(version):
-    _, summary = await run_benchmark_with_results(version)
+async def run_benchmark(version, top_k: int = 3):
+    _, summary = await run_benchmark_with_results(version, top_k=top_k)
     return summary
 
 
 async def main():
-    v1_summary = await run_benchmark("Agent_V1_Base")
-    v2_results, v2_summary = await run_benchmark_with_results("Agent_V2_Optimized")
+    # V1: config gốc — top_k=3
+    v1_summary = await run_benchmark("Agent_V1_Base", top_k=3)
+
+    # V2: cải tiến — top_k=5, runner đã được parallel hoá (RAGAS + judge song song)
+    v2_results, v2_summary = await run_benchmark_with_results("Agent_V2_Optimized", top_k=5)
 
     if not v1_summary or not v2_summary:
         print("❌ Không thể chạy Benchmark. Kiểm tra lại data/golden_set.jsonl.")

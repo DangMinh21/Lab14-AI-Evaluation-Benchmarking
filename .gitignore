@@ -4,4 +4,5 @@ venv/
 __pycache__/
 *.pyc
 .DS_Store
-
+reports/summary_template.json
+reports/benchmark_results_template.json

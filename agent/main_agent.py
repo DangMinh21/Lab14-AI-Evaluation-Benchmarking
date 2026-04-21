@@ -44,8 +44,9 @@ def load_documents(docs_dir: str) -> List[Dict]:
 class MainAgent:
     """RAG Agent sử dụng ChromaDB in-memory + OpenAI embeddings"""
 
-    def __init__(self):
+    def __init__(self, top_k: int = 3):
         self.name = "SupportAgent-v1"
+        self.top_k = top_k
         self._init_vector_store()
 
     def _init_vector_store(self):
@@ -147,7 +148,7 @@ class MainAgent:
         RAG pipeline: Retrieve → Generate
         Trả về retrieved_ids để RetrievalEvaluator tính Hit Rate & MRR.
         """
-        retrieved_ids, chunk_ids, contexts = await self._retrieve(question, top_k=3)
+        retrieved_ids, chunk_ids, contexts = await self._retrieve(question, top_k=self.top_k)
         answer, metadata = await self._generate(question, contexts)
         metadata["sources"] = retrieved_ids
 

@@ -20,12 +20,13 @@ class BenchmarkRunner:
         # Inject retrieved_ids vào case để evaluator dùng — không gọi agent lần 2
         case_with_retrieval = {**test_case, "retrieved_ids": response.get("retrieved_ids", [])}
 
-        ragas_scores = await self.evaluator.score(case_with_retrieval, response)
-
-        judge_result = await self.judge.evaluate_multi_judge(
-            test_case["question"],
-            response["answer"],
-            test_case["expected_answer"]
+        ragas_scores, judge_result = await asyncio.gather(
+            self.evaluator.score(case_with_retrieval, response),
+            self.judge.evaluate_multi_judge(
+                test_case["question"],
+                response["answer"],
+                test_case["expected_answer"],
+            ),
         )
 
         cost_usd = response.get("metadata", {}).get("cost_usd", 0.0)
