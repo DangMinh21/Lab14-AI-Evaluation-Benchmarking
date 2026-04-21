@@ -41,12 +41,33 @@ def load_documents(docs_dir: str) -> List[Dict]:
     return chunks
 
 
-class MainAgent:
-    """RAG Agent sử dụng ChromaDB in-memory + OpenAI embeddings"""
+_DEFAULT_SYSTEM_PROMPT = (
+    "Bạn là trợ lý hỗ trợ nội bộ. "
+    "Chỉ trả lời dựa trên tài liệu được cung cấp. "
+    "Nếu không có thông tin, hãy nói rõ: 'Tôi không có thông tin về vấn đề này trong tài liệu.' "
+    "Trả lời ngắn gọn, rõ ràng."
+)
 
-    def __init__(self, top_k: int = 3):
+_V2_SYSTEM_PROMPT = (
+    "Bạn là trợ lý hỗ trợ khách hàng chuyên nghiệp và chính xác. "
+    "Nhiệm vụ: Trả lời đầy đủ, chi tiết và chính xác dựa HOÀN TOÀN trên tài liệu được cung cấp. "
+    "Quy tắc quan trọng: "
+    "1. Đọc kỹ TẤT CẢ tài liệu trước khi trả lời. "
+    "2. Trích dẫn chính xác: ngày tháng cụ thể, con số chính xác, tên gọi đúng. "
+    "3. Nếu câu hỏi về điều kiện hoặc ngoại lệ, liệt kê ĐẦY ĐỦ tất cả trường hợp. "
+    "4. Trả lời trực tiếp vào đúng câu hỏi được hỏi, không thêm thông tin lạc đề. "
+    "5. Nếu không có thông tin trong tài liệu, trả lời: 'Tôi không có thông tin về vấn đề này trong tài liệu.' "
+    "6. Tuyệt đối không bịa thêm thông tin ngoài tài liệu."
+)
+
+
+class MainAgent:
+    """RAG Agent sử dụng ChromaDB persistent + OpenAI embeddings"""
+
+    def __init__(self, top_k: int = 3, system_prompt: str = None):
         self.name = "SupportAgent-v1"
         self.top_k = top_k
+        self.system_prompt = system_prompt or _DEFAULT_SYSTEM_PROMPT
         self._init_vector_store()
 
     def _init_vector_store(self):
@@ -114,12 +135,7 @@ class MainAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "Bạn là trợ lý hỗ trợ nội bộ. "
-                        "Chỉ trả lời dựa trên tài liệu được cung cấp. "
-                        "Nếu không có thông tin, hãy nói rõ: 'Tôi không có thông tin về vấn đề này trong tài liệu.' "
-                        "Trả lời ngắn gọn, rõ ràng."
-                    ),
+                    "content": self.system_prompt,
                 },
                 {
                     "role": "user",
