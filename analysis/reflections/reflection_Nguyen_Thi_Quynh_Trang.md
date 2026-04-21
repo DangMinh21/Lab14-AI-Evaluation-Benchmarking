@@ -155,8 +155,6 @@ Kappa = (P_o - P_e) / (1 - P_e)
 - Giải quyết triệt để lỗi runtime và lỗi nhận thức khi đọc kết quả fast mode.
 - Đảm bảo pipeline ổn định và dễ debug hơn.
 
-Kỳ vọng điểm cá nhân: 38-40/40 nếu kèm commit evidence rõ ràng.
-
 ## 8. Bài học rút ra
 1. Hệ thống đánh giá AI đáng tin phải có nhiều lớp bảo vệ: multi-judge, conflict handling, bias checking.
 2. Độ ổn định parser và chuẩn hóa output quan trọng không kém thuật toán chấm điểm.
