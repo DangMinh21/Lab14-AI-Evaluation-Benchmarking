@@ -189,8 +189,10 @@ Lab14-AI-Evaluation-Benchmarking/
 ├── analysis/
 │   ├── failure_analysis.md      # Phân tích 5 Whys + Failure Clustering
 │   └── reflections/
-│       ├── Report_Dang_Van_Minh.md
-│       └── reflection_Nguyen_Thi_Quynh_Trang.md
+│       ├── reflection_Dang_Van_Minh.md
+│       ├── reflection_Dong_Van_Thinh.md
+│       ├── reflection_Nguyen_Thi_Quynh_Trang.md
+│       └── reflection_Nguyen_Quang_Tung.md
 │
 ├── plans/                       # Kế hoạch triển khai từng thành viên
 ├── main.py                      # Entry point — chạy toàn bộ pipeline
@@ -211,8 +213,10 @@ Lab14-AI-Evaluation-Benchmarking/
 | `reports/summary.json` | Xem file | ✅ |
 | `reports/benchmark_results.json` | Xem file | ✅ |
 | `analysis/failure_analysis.md` | Xem file | ✅ |
-| Individual reflection — Đặng Văn Minh | `analysis/reflections/Report_Dang_Van_Minh.md` | ✅ |
+| Individual reflection — Đặng Văn Minh | `analysis/reflections/reflection_Dang_Van_Minh.md` | ✅ |
+| Individual reflection — Đồng Văn Thịnh | `analysis/reflections/reflection_Dong_Van_Thinh.md` | ✅ |
 | Individual reflection — Nguyễn Thị Quỳnh Trang | `analysis/reflections/reflection_Nguyen_Thi_Quynh_Trang.md` | ✅ |
+| Individual reflection — Nguyễn Quang Tùng | `analysis/reflections/reflection_Nguyen_Quang_Tung.md` | ✅ |
 | Format validation | `python check_lab.py` | ✅ |
 
 ---
@@ -303,14 +307,16 @@ Kiểm tra: `analysis/failure_analysis.md`
 
 ---
 
-### Chấm điểm cá nhân (40 điểm × 2 thành viên có báo cáo)
+### Chấm điểm cá nhân (40 điểm × 4 thành viên)
 
 | Thành viên | File báo cáo | Nội dung |
 |------------|--------------|---------|
-| Đặng Văn Minh | `analysis/reflections/Report_Dang_Van_Minh.md` | Team Lead: repo setup, retrieval eval, async runner, RAGAS integration, regression gate, V2 optimization |
+| Đặng Văn Minh | `analysis/reflections/reflection_Dang_Van_Minh.md` | Team Lead: repo setup, retrieval eval, async runner, RAGAS integration, regression gate, V2 optimization |
+| Đồng Văn Thịnh | `analysis/reflections/reflection_Dong_Van_Thinh.md` | Data Engineer: golden dataset, SDG pipeline, red teaming, failure analysis (5 Whys) |
 | Nguyễn Thị Quỳnh Trang | `analysis/reflections/reflection_Nguyen_Thi_Quynh_Trang.md` | Multi-Judge Engine: dual model, conflict resolution, fast mode, position bias, parser hardening |
+| Nguyễn Quang Tùng | `analysis/reflections/reflection_Nguyen_Quang_Tung.md` | Backend Engineer: RAG Agent (ChromaDB), retrieval eval (Hit Rate & MRR), chunking strategy |
 
-Mỗi báo cáo gồm: Engineering Contribution có git commit evidence, Technical Depth (MRR/Cohen's Kappa/Position Bias), Problem Solving (3 vấn đề thực tế).
+Mỗi báo cáo gồm: Engineering Contribution có git commit evidence, Technical Depth, Problem Solving (vấn đề thực tế gặp phải).
 
 ---
 
