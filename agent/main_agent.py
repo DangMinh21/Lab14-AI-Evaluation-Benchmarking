@@ -7,11 +7,13 @@ load_dotenv()
 
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "docs")
 
+CHUNK_SIZE = 250
+OVERLAP=25
 
 def load_documents(docs_dir: str) -> List[Dict]:
     """Đọc tất cả file .txt trong data/docs/, chunk theo fixed_size (250 words, overlap 25 words)"""
-    CHUNK_SIZE = 50   # words
-    OVERLAP = 5       # words
+    # cz = CHUNK_SIZE = 250  # words
+    # ol = OVERLAP = 25      # words
 
     chunks = []
     for filename in sorted(os.listdir(docs_dir)):
@@ -161,8 +163,12 @@ class MainAgent:
 if __name__ == "__main__":
     async def test():
         agent = MainAgent()
-        resp = await agent.query("Chính sách nghỉ phép năm là gì?")
-        print("Answer:", resp["answer"][:150])
+        question = "Nhân viên mới vào công ty cần làm gì để có thể làm remote?"
+        resp = await agent.query(question)
+        print("Chunk size: ", CHUNK_SIZE)
+        print("Overlap", OVERLAP)
+        print("Question", question)
+        print("Answer:", resp["answer"])
         print("Retrieved IDs:", resp["retrieved_ids"])
         print("Cost:", resp["metadata"]["cost_usd"])
         assert "retrieved_ids" in resp and len(resp["retrieved_ids"]) > 0
